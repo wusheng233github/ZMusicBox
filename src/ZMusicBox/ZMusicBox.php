@@ -24,6 +24,7 @@ class ZMusicBox extends PluginBase implements Listener{
 	public $name;
 	/** @var null|\pocketmine\scheduler\TaskHandler */
 	public $taskHandler;
+	public $loop = false;
 	
 	public function onEnable(){
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
@@ -37,24 +38,23 @@ class ZMusicBox extends PluginBase implements Listener{
 		}else{
 			$this->StartNewTask();
 		}
-	} 
+	}
 
 	public function onCommand(CommandSender $sender, Command $cmd, $label, array $args){
 		if($cmd->getName() != "music" || !isset($args[0])) {
 			return false;
 		}
+		if(!$cmd->testPermission($sender)) {
+			return true;
+		}
 		switch($args[0]){
 			case "next":
 			case "skip":
-				$this->StartNewTask();
+				$this->StartNewTask(true);
 				$sender->sendMessage(TextFormat::GREEN."Switched to next song");
 				break;
 			case "stop":
 			case "pause":
-				if(!$sender->isOp()){
-					$sender->sendMessage(TextFormat::RED."No Permission");
-					break;
-				}
 				if($this->taskHandler !== null) {
 					$this->taskHandler->cancel();
 					$this->taskHandler = null;
@@ -64,34 +64,46 @@ class ZMusicBox extends PluginBase implements Listener{
 			case "start":
 			case "begin":
 			case "resume":
-				if(!$sender->isOp()){
-					$sender->sendMessage(TextFormat::RED."No Permission");
-					break;
-				}
 				$this->StartNewTask();
 				$sender->sendMessage(TextFormat::GREEN."Song Started");
 				break;
+			case 'loop':
+				switch(isset($args[1]) ? $args[1] : "") {
+					case 'on':
+						$this->loop = true;
+						break;
+					case 'off':
+						$this->loop = false;
+						break;
+					default:
+						$this->loop = !$this->loop;
+						break;
+				}
+				$sender->sendMessage(TextFormat::GREEN."Single loop is ".($this->loop ? "on" : "off"));
+				break;
+			default:
+				return false;
 		}
 		return true;
 	}
-	
+
 	public function CheckMusic(){
 		if($this->getDirCount($this->getPluginDir()) > 0 and $this->RandomFile($this->getPluginDir(),"nbs")){
 			return true;
 		}
 		return false;
 	}
-	
+
 	public function getDirCount($PATH){
 		$num = sizeof(scandir($PATH));
 		$num = ($num>2)?$num-2:0;
 		return $num;
 	}
-	
+
 	public function getPluginDir(){
 		return $this->getDataFolder() . 'songs/';
 	}
-	
+
 	public function getRandomMusic(){
 		$filepath = $this->RandomFile($this->getPluginDir(),"nbs");
 		if($filepath){
@@ -141,7 +153,7 @@ class ZMusicBox extends PluginBase implements Listener{
 		$this->name = str_replace('.nbs', '', $rname);
 		return $folder . $files[$rand];
 	}
-	
+
 	public function getNearbyNoteBlock($x,$y,$z,$world){ // TODO: 性能问题
 		$nearby = [];
 		$range = $this->getConfig()->get('range', 3);
@@ -167,6 +179,7 @@ class ZMusicBox extends PluginBase implements Listener{
 	}
 
 	public function Play(array $sounds){
+		$batchmode = $this->getConfig()->get('batch', 0);
 		foreach($this->getServer()->getOnlinePlayers() as $onlineplayer){
 			$noteblocks = $this->getNearbyNoteBlock($onlineplayer->x,$onlineplayer->y,$onlineplayer->z,$onlineplayer->getLevel());
 			usort($noteblocks, function(Vector3 $a, Vector3 $b) use($onlineplayer) {
@@ -183,13 +196,17 @@ class ZMusicBox extends PluginBase implements Listener{
 			if(empty($noteblocks)){
 				continue;
 			}
-			$batch = new BatchPacket();
+			$batch = [];
 			$pk = new TextPacket();
 			$pk->type = TextPacket::TYPE_POPUP;
-			$pk->message = '';
+			$pk->message = "";
+			if($this->getConfig()->get('progressbar', true)) {
+				$length = 30;
+				$progress = max(ceil(min($this->song->tick / $this->song->length * $length, $length)) - 1, 0);
+				$pk->message = TextFormat::LIGHT_PURPLE . str_repeat("=", $progress) . ">" . TextFormat::GRAY . str_repeat('-', $length - $progress - 1);
+			}
 			$pk->source = "§b|->§6Now Playing: §a" . ($this->song->name != "" ? $this->song->name : $this->name) . "§b<-|";
-			$pk->encode();
-			$batch->payload .= Binary::writeInt(strlen($pk->buffer)) . $pk->buffer;
+			$batch[] = $pk;
 			foreach($sounds as $sound) {
 				if(next($noteblocks) === false) {
 					reset($noteblocks);
@@ -204,16 +221,30 @@ class ZMusicBox extends PluginBase implements Listener{
 				$pk->z = $block->z;
 				$pk->case1 = $sound[1]; // type
 				$pk->case2 = $sound[0]; // sound
-				$pk->encode();
-				$batch->payload .= Binary::writeInt(strlen($pk->buffer)) . $pk->buffer;
+				$batch[] = $pk;
 			}
-			$batch->payload = zlib_encode($batch->payload, ZLIB_ENCODING_DEFLATE, 5);
-			$onlineplayer->dataPacket($batch);
+			if($batchmode == 1) {
+				$pk = new BatchPacket();
+				foreach($batch as $packet) {
+					$packet->encode();
+					$pk->payload .= Binary::writeInt(strlen($packet->buffer)) . $packet->buffer;
+				}
+				$pk->payload = zlib_encode($pk->payload, ZLIB_ENCODING_DEFLATE, 5);
+				$onlineplayer->dataPacket($pk);
+			} else {
+				foreach($batch as $packet) {
+					$onlineplayer->batchDataPacket($packet); // 有异步压缩
+				}
+			}
 		}
 	}
 
-	public function StartNewTask(){
-		$this->song = $this->getRandomMusic();
+	public function StartNewTask($noloop = false){
+		if(!$this->loop || $noloop) {
+			$this->song = $this->getRandomMusic();
+		} else {
+			$this->song->tick = 0;
+		}
 		if($this->taskHandler !== null) {
 			$this->taskHandler->cancel();
 		}

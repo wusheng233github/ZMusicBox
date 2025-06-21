@@ -1,13 +1,13 @@
 <?php
 namespace ZMusicBox;
 
-class NoteBoxAPI{
+use pocketmine\utils\BinaryStream;
+
+class NoteBoxAPI extends BinaryStream{
 	public $plugin;
 	public $length;
 	public $sounds = [];
 	public $tick = 0;
-	public $buffer;
-	public $offset = 0;
 	public $name;
 	public $speed;
 
@@ -16,14 +16,14 @@ class NoteBoxAPI{
 		$fopen = fopen($path, "r");
 		$this->buffer = fread($fopen, filesize($path));
 		fclose($fopen);
-		$this->length = $this->getShort();
-		$height = $this->getShort();
+		$this->length = $this->getLShort(); // TODO: 新NBS
+		$height = $this->getLShort();
 		$this->name = $this->getString();
 		$this->getString();
 		$this->getString();
 		$this->getString();
-		$this->speed = $this->getShort();
-		$this->getByte();
+		$this->speed = $this->getLShort();
+		$this->getByte(); // TODO
 		$this->getByte();
 		$this->getByte();
 		$this->getInt();
@@ -32,10 +32,10 @@ class NoteBoxAPI{
 		$this->getInt();
 		$this->getInt();
 		$this->getString();
- 		$tick = $this->getShort() - 1;
+		$tick = $this->getLShort() - 1;
 		while(true){
 			$sounds = [];
-			$this->getShort();
+			$this->getLShort();
 			while(true){
 				switch($this->getByte()){
 					case 1: // BASS
@@ -70,37 +70,15 @@ class NoteBoxAPI{
 				}
 
 				$sounds[] = [$pitch, $type];
-				if($this->getShort() == 0) break;
+				if($this->getLShort() == 0) break;
 			}
 			$this->sounds[$tick] = $sounds;
-			if(($jump = $this->getShort()) !== 0){
+			if(($jump = $this->getLShort()) !== 0){
 				$tick += $jump;
 			}else{
 				break;
 			}
 		}
-	}
-
-	public function get($len){
-		if($len < 0){
-			$this->offset = strlen($this->buffer) - 1;
-			return "";
-		}elseif($len === true){
-			return substr($this->buffer, $this->offset);
-		}
-		return $len === 1 ? $this->buffer[$this->offset++] : substr($this->buffer, ($this->offset += $len) - $len, $len);
-	}
-
-	public function getByte(){
-		return ord($this->buffer[$this->offset++]);
-	}
-
-	public function getInt(){
-		return (PHP_INT_SIZE === 8 ? unpack("N", $this->get(4))[1] << 32 >> 32 : unpack("N", $this->get(4))[1]);
-	}
-
-	public function getShort(){
-		return unpack("S", $this->get(2))[1];
 	}
 	
 	public function getString(){

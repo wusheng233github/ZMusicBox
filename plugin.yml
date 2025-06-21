@@ -9,7 +9,7 @@ commands:
  music:
   permission: ZMusicBox.music
   description: Manage the music in your server
-  usage: /music <start|stop|next>
+  usage: /music <start|stop|next|loop>
 
 permissions:
  ZMusicBox:
