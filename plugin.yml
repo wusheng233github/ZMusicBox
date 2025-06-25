@@ -13,10 +13,30 @@ commands:
 
 permissions:
  ZMusicBox:
-  default: op
-  description: ZMusicBox Commands
+  default: true
+  description: Allows use of ZMusicBox plugin functionality
   children:
-     ZMusicBox.music:
+    ZMusicBox.music:
       default: op
       description: ZMusicBox Commands
-    
+      children:
+        ZMusicBox.music.start:
+          description: Start playing a random song
+        ZMusicBox.music.stop:
+          description: Stop playing the current song
+        ZMusicBox.music.next:
+          description: Start playing a random song
+        ZMusicBox.music.loop:
+          description: Switch single loop
+          children:
+            ZMusicBox.music.loop.on:
+              description: Turn on single song loop
+            ZMusicBox.music.loop.off:
+              description: Turn off single song loop
+    ZMusicBox.canhear:
+      description: Can hear the song playing
+    ZMusicBox.popup:
+      description: Display the name of the song currently playing
+      children:
+        ZMusicBox.popup.progress:
+          description: Display the song playing progress bar

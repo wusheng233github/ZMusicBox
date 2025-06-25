@@ -80,9 +80,8 @@ class NoteBoxAPI extends BinaryStream{
 			}
 		}
 	}
-	
+
 	public function getString(){
 		return $this->get(unpack("I", $this->get(4))[1]);
 	}
-
 }

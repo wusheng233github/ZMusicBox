@@ -6,6 +6,7 @@ use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
+use pocketmine\event\TranslationContainer;
 use pocketmine\level\Level;
 use pocketmine\utils\TextFormat;
 use pocketmine\math\Vector3;
@@ -26,7 +27,7 @@ class ZMusicBox extends PluginBase implements Listener{
 	/** @var null|\pocketmine\scheduler\TaskHandler */
 	public $taskHandler;
 	public $loop = false;
-	
+
 	public function onEnable(){
 		if(!is_dir($this->getPluginDir())){
 			mkdir($this->getPluginDir());
@@ -50,36 +51,60 @@ class ZMusicBox extends PluginBase implements Listener{
 		switch($args[0]){
 			case "next":
 			case "skip":
+				if(!$sender->hasPermission("ZMusicBox.music.next")) {
+					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
+					return true;
+				}
 				$this->StartNewTask(true);
-				$sender->sendMessage(TextFormat::GREEN."Switched to next song");
+				$sender->sendMessage(TextFormat::GREEN . "Switched to next song");
 				break;
 			case "stop":
 			case "pause":
+				if(!$sender->hasPermission("ZMusicBox.music.stop")) {
+					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
+					return true;
+				}
 				if($this->taskHandler !== null){
 					$this->taskHandler->cancel();
 					$this->taskHandler = null;
 				}
-				$sender->sendMessage(TextFormat::GREEN."Song Stopped");
+				$sender->sendMessage(TextFormat::GREEN . "Song Stopped");
 				break;
 			case "start":
 			case "begin":
 			case "resume":
+				if(!$sender->hasPermission("ZMusicBox.music.start")) {
+					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
+					return true;
+				}
 				$this->StartNewTask();
-				$sender->sendMessage(TextFormat::GREEN."Song Started");
+				$sender->sendMessage(TextFormat::GREEN . "Song Started");
 				break;
 			case "loop":
 				switch(isset($args[1]) ? $args[1] : ""){
 					case "on":
+						if(!$sender->hasPermission("ZMusicBox.music.loop.on")) {
+							$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
+							return true;
+						}
 						$this->loop = true;
 						break;
 					case "off":
+						if(!$sender->hasPermission("ZMusicBox.music.loop.off")) {
+							$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
+							return true;
+						}
 						$this->loop = false;
 						break;
 					default:
+						if(!$sender->hasPermission("ZMusicBox.music.loop")) {
+							$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
+							return true;
+						}
 						$this->loop = !$this->loop;
 						break;
 				}
-				$sender->sendMessage(TextFormat::GREEN."Single loop is " . ($this->loop ? "on" : "off"));
+				$sender->sendMessage(TextFormat::GREEN . "Single loop is " . ($this->loop ? "on" : "off"));
 				break;
 			default:
 				return false;
@@ -118,8 +143,8 @@ class ZMusicBox extends PluginBase implements Listener{
 		}
 		return false;
 	}
-	
-	Public function RandomFile($folder='', $extensions='.*'){
+
+	public function RandomFile($folder='', $extensions='.*'){
 		$folder = trim($folder);
 		$folder = ($folder == '') ? './' : $folder;
 		if(!is_dir($folder)){
@@ -182,36 +207,46 @@ class ZMusicBox extends PluginBase implements Listener{
 
 	public function Play(array $sounds){
 		$batchmode = $this->getConfig()->get('batch', 0);
-		$popup = new TextPacket();
-		$popup->type = TextPacket::TYPE_POPUP;
-		$popup->message = '';
+		$progressbar = '';
 		if($this->getConfig()->get('progressbar', true)){
 			$length = 30;
 			$progress = max(ceil(min($this->song->tick / $this->song->length * $length, $length)) - 1, 0);
-			$popup->message = TextFormat::LIGHT_PURPLE . str_repeat("=", $progress) . ">" . TextFormat::GRAY . str_repeat("-", $length - $progress - 1);
+			$progressbar = TextFormat::LIGHT_PURPLE . str_repeat("=", $progress) . ">" . TextFormat::GRAY . str_repeat("-", $length - $progress - 1);
 		}
-		$popup->source = '§b|->§6Now Playing: §a' . ($this->song->name != "" ? $this->song->name : $this->name) . '§b<-|';
+		$songname = '§b|->§6Now Playing: §a' . ($this->song->name != "" ? $this->song->name : $this->name) . '§b<-|';
 		foreach($this->getServer()->getOnlinePlayers() as $onlineplayer){
 			$noteblocks = $this->getNearbyNoteBlock($onlineplayer->x, $onlineplayer->y, $onlineplayer->z, $onlineplayer->getLevel(), $this->getConfig()->get('range', 3), count($sounds));
 			if(empty($noteblocks)){
 				continue;
 			}
-			$batch = [$popup];
-			foreach($sounds as $sound){
-				if(next($noteblocks) === false){
-					reset($noteblocks);
+			$batch = [];
+			if($onlineplayer->hasPermission('ZMusicBox.popup')) {
+				$pk = new TextPacket();
+				$pk->type = TextPacket::TYPE_POPUP;
+				$pk->source = $songname;
+				$pk->message = '';
+				if($onlineplayer->hasPermission('ZMusicBox.popup.progress')) {
+					$pk->message = $progressbar;
 				}
-				$block = current($noteblocks);
-				if($block === false){
-					continue;
-				}
-				$pk = new BlockEventPacket();
-				$pk->x = $block->x;
-				$pk->y = $block->y;
-				$pk->z = $block->z;
-				$pk->case1 = $sound[1]; // type
-				$pk->case2 = $sound[0]; // sound
 				$batch[] = $pk;
+			}
+			if($onlineplayer->hasPermission('ZMusicBox.canhear')) {
+				foreach($sounds as $sound){
+					if(next($noteblocks) === false){
+						reset($noteblocks);
+					}
+					$block = current($noteblocks);
+					if($block === false){
+						continue;
+					}
+					$pk = new BlockEventPacket();
+					$pk->x = $block->x;
+					$pk->y = $block->y;
+					$pk->z = $block->z;
+					$pk->case1 = $sound[1]; // type
+					$pk->case2 = $sound[0]; // sound
+					$batch[] = $pk;
+				}
 			}
 			if($batchmode == 1){
 				$pk = new BatchPacket();
