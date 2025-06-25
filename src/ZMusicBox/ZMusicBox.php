@@ -158,25 +158,25 @@ class ZMusicBox extends PluginBase implements Listener{
 		$nearby = [];
 		$num = 0;
 		for($layer = 0; $layer <= $range; $layer++){
-        	for($i = -$layer; $i <= $layer; $i++){
-            	for($j = -$layer; $j <= $layer; $j++){
-                	for($k = -$layer; $k <= $layer; $k++){
-                    	if(abs($i) + abs($j) + abs($k) <= $layer){
-                        	$blockX = $x + $i;
-        	                $blockY = $y + $j;
-	                        $blockZ = $z + $k;
-    	                    $block = $world->getBlock(new Vector3($blockX, $blockY, $blockZ));
-    	                    if($block instanceof NoteBlock) {
-        	                    $nearby[] = $block;
+			for($i = -$layer; $i <= $layer; $i++){
+				for($j = -$layer; $j <= $layer; $j++){
+					for($k = -$layer; $k <= $layer; $k++){
+						if(abs($i) + abs($j) + abs($k) <= $layer){
+							$blockX = $x + $i;
+							$blockY = $y + $j;
+							$blockZ = $z + $k;
+							$block = $world->getBlock(new Vector3($blockX, $blockY, $blockZ));
+							if($block instanceof NoteBlock) {
+								$nearby[] = $block;
 								if($max != -1 && ++$num > $max) {
 									break 4;
 								}
-            	            }
-                	    }
-            	    }
-        	    }
-    	    }
-	    }
+							}
+						}
+					}
+				}
+			}
+		}
 		return $nearby;
 	}
 
