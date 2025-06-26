@@ -39,6 +39,8 @@ $zmusicbox->taskHandler = null;
 ```
 
 ## Other Information
+ - This is a fork of [BrokenItZAndrei100/ZMusicBox](https://github.com/BrokenItZAndrei100/ZMusicBox), but downgraded to API 2.0.0 (tested on MCPE Alpha 0.14.3). If you are looking for a version compatible with API 3 to 4, it is recommended to take a look at it.
+ - [note3crafter/ZMusicBox](https://github.com/note3crafter/ZMusicBox) is also a fork of BrokenItZAndrei100/ZMusicBox and has been tested on Altay v.3.16.1 (Minecraft 1.16.100)
  - Use Minecraft Note Block Studio to convert midi files into nbs files.
 Website: http://www.stuffbydavid.com/mcnbs
  - Please do not use this code nor these algorithms for other plugins

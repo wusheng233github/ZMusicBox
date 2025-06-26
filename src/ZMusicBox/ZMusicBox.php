@@ -29,10 +29,10 @@ class ZMusicBox extends PluginBase implements Listener{
 	public $loop = false;
 
 	public function onEnable(){
+		$this->saveDefaultConfig();
 		if(!is_dir($this->getPluginDir())){
 			mkdir($this->getPluginDir());
 		}
-		$this->saveDefaultConfig();
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 		if(!$this->CheckMusic()){
 			$this->getLogger()->info("§bPlease put in nbs files!!!");
@@ -140,6 +140,9 @@ class ZMusicBox extends PluginBase implements Listener{
 				$this->songsloaded[$filepath] = $api;
 				return $api;
 			}
+		}
+		if(($randomkey = array_rand($this->songsloaded)) !== null) {
+			return $this->songsloaded[$randomkey];
 		}
 		return false;
 	}
@@ -266,10 +269,13 @@ class ZMusicBox extends PluginBase implements Listener{
 
 	public function StartNewTask($noloop = false){
 		if(!$this->loop || $noloop){
-			$this->song = $this->getRandomMusic();
-		} else {
-			$this->song->tick = 0;
+			$song = $this->getRandomMusic();
+			if($song === false) {
+				throw new \Exception("There is no song file in the plugins/ZMusicBox/songs directory"); // FIXME
+			}
+			$this->song = $song;
 		}
+		$this->song->tick = 0;
 		if($this->taskHandler !== null){
 			$this->taskHandler->cancel();
 		}
