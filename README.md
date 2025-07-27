@@ -5,7 +5,7 @@ Play music in your server using noteblocks!
  - Your server software (possibly PocketMine-MP or its forks) supports noteblock
  - Compatible with **PocketMine-MP API version 2.0.0**
  - A player standing next to the noteblock with audio on and a working internet connection
- - Songs must be in a valid **Classic NBS** format and have a .nbs file extension
+ - Songs should preferably be in a valid Classic NBS format and have a .nbs file extension
 
 ## How to use
 1) Place the phar in your plugins folder of the server

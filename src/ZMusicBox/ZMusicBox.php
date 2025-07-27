@@ -30,8 +30,8 @@ class ZMusicBox extends PluginBase implements Listener{
 
 	public function onEnable(){
 		$this->saveDefaultConfig();
-		if(!is_dir($this->getPluginDir())){
-			mkdir($this->getPluginDir());
+		if(!is_dir($this->getSongsDir())){
+			mkdir($this->getSongsDir());
 		}
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 		if(!$this->CheckMusic()){
@@ -42,7 +42,7 @@ class ZMusicBox extends PluginBase implements Listener{
 	}
 
 	public function onCommand(CommandSender $sender, Command $cmd, $label, array $args){
-		if($cmd->getName() != "music" || !isset($args[0])){
+		if($cmd->getName() != "music" or !isset($args[0])){
 			return false;
 		}
 		if(!$cmd->testPermission($sender)){
@@ -51,7 +51,7 @@ class ZMusicBox extends PluginBase implements Listener{
 		switch($args[0]){
 			case "next":
 			case "skip":
-				if(!$sender->hasPermission("ZMusicBox.music.next")) {
+				if(!$sender->hasPermission("ZMusicBox.music.next")){
 					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
 					return true;
 				}
@@ -60,7 +60,7 @@ class ZMusicBox extends PluginBase implements Listener{
 				break;
 			case "stop":
 			case "pause":
-				if(!$sender->hasPermission("ZMusicBox.music.stop")) {
+				if(!$sender->hasPermission("ZMusicBox.music.stop")){
 					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
 					return true;
 				}
@@ -73,7 +73,7 @@ class ZMusicBox extends PluginBase implements Listener{
 			case "start":
 			case "begin":
 			case "resume":
-				if(!$sender->hasPermission("ZMusicBox.music.start")) {
+				if(!$sender->hasPermission("ZMusicBox.music.start")){
 					$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
 					return true;
 				}
@@ -83,21 +83,21 @@ class ZMusicBox extends PluginBase implements Listener{
 			case "loop":
 				switch(isset($args[1]) ? $args[1] : ""){
 					case "on":
-						if(!$sender->hasPermission("ZMusicBox.music.loop.on")) {
+						if(!$sender->hasPermission("ZMusicBox.music.loop.on")){
 							$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
 							return true;
 						}
 						$this->loop = true;
 						break;
 					case "off":
-						if(!$sender->hasPermission("ZMusicBox.music.loop.off")) {
+						if(!$sender->hasPermission("ZMusicBox.music.loop.off")){
 							$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
 							return true;
 						}
 						$this->loop = false;
 						break;
 					default:
-						if(!$sender->hasPermission("ZMusicBox.music.loop")) {
+						if(!$sender->hasPermission("ZMusicBox.music.loop")){
 							$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.permission"));
 							return true;
 						}
@@ -113,7 +113,7 @@ class ZMusicBox extends PluginBase implements Listener{
 	}
 
 	public function CheckMusic(){
-		if($this->getDirCount($this->getPluginDir()) > 0 and $this->RandomFile($this->getPluginDir(), "nbs")){
+		if($this->getDirCount($this->getSongsDir()) > 0 and $this->randomFile($this->getSongsDir(), "nbs")){
 			return true;
 		}
 		return false;
@@ -125,29 +125,38 @@ class ZMusicBox extends PluginBase implements Listener{
 		return $num;
 	}
 
-	public function getPluginDir(){
+	public function getSongsDir(){
 		return $this->getDataFolder() . "songs/";
 	}
 
-	public function getRandomMusic(){
-		$filepath = $this->RandomFile($this->getPluginDir(), "nbs");
+	/**
+	 * @param false|string|null $filepath
+	 * @return false|NoteBoxAPI
+	 */
+	public function getMusic($filepath = null){
+		if($filepath === null) {
+			$filepath = $this->randomFile($this->getSongsDir(), 'nbs');
+		}
 		if($filepath){
 			if(isset($this->songsloaded[$filepath])){
+				$this->getLogger()->debug("Loaded: $filepath");
 				$this->songsloaded[$filepath]->tick = 0;
 				return $this->songsloaded[$filepath];
-			} else {
+			}else{
+				$this->getLogger()->debug("File: $filepath");
 				$api = new NoteBoxAPI($this,$filepath);
 				$this->songsloaded[$filepath] = $api;
 				return $api;
 			}
 		}
-		if(($randomkey = array_rand($this->songsloaded)) !== null) {
+		if(($randomkey = array_rand($this->songsloaded)) !== null){
+			$this->getLogger()->debug($filepath);
 			return $this->songsloaded[$randomkey];
 		}
 		return false;
 	}
 
-	public function RandomFile($folder='', $extensions='.*'){
+	public function randomFile($folder='', $extensions='.*'){ // XXX
 		$folder = trim($folder);
 		$folder = ($folder == '') ? './' : $folder;
 		if(!is_dir($folder)){
@@ -182,7 +191,7 @@ class ZMusicBox extends PluginBase implements Listener{
 		return $folder . $files[$rand];
 	}
 
-	public function getNearbyNoteBlock($x, $y, $z, Level $world, $range, $max = -1){ // TODO: 性能问题
+	public function getNearbyNoteBlock($x, $y, $z, Level $world, $range, $max = -1){ // XXX
 		$nearby = [];
 		$num = 0;
 		for($layer = 0; $layer <= $range; $layer++){
@@ -194,9 +203,9 @@ class ZMusicBox extends PluginBase implements Listener{
 							$blockY = $y + $j;
 							$blockZ = $z + $k;
 							$block = $world->getBlock(new Vector3($blockX, $blockY, $blockZ));
-							if($block instanceof NoteBlock) {
+							if($block instanceof NoteBlock){
 								$nearby[] = $block;
-								if($max != -1 && ++$num > $max) {
+								if($max != -1 and ++$num > $max){
 									break 4;
 								}
 							}
@@ -223,17 +232,17 @@ class ZMusicBox extends PluginBase implements Listener{
 				continue;
 			}
 			$batch = [];
-			if($onlineplayer->hasPermission('ZMusicBox.popup')) {
+			if($onlineplayer->hasPermission('ZMusicBox.popup')){
 				$pk = new TextPacket();
 				$pk->type = TextPacket::TYPE_POPUP;
 				$pk->source = $songname;
 				$pk->message = '';
-				if($onlineplayer->hasPermission('ZMusicBox.popup.progress')) {
+				if($onlineplayer->hasPermission('ZMusicBox.popup.progress')){
 					$pk->message = $progressbar;
 				}
 				$batch[] = $pk;
 			}
-			if($onlineplayer->hasPermission('ZMusicBox.canhear')) {
+			if($onlineplayer->hasPermission('ZMusicBox.canhear')){
 				foreach($sounds as $sound){
 					if(next($noteblocks) === false){
 						reset($noteblocks);
@@ -259,7 +268,7 @@ class ZMusicBox extends PluginBase implements Listener{
 				}
 				$pk->payload = zlib_encode($pk->payload, ZLIB_ENCODING_DEFLATE, 5);
 				$onlineplayer->dataPacket($pk);
-			} else {
+			}else{
 				foreach($batch as $packet){
 					$onlineplayer->batchDataPacket($packet);
 				}
@@ -268,9 +277,9 @@ class ZMusicBox extends PluginBase implements Listener{
 	}
 
 	public function StartNewTask($noloop = false){
-		if(!$this->loop || $noloop){
-			$song = $this->getRandomMusic();
-			if($song === false) {
+		if(!$this->loop or $noloop){
+			$song = $this->getMusic();
+			if($song === false){
 				throw new \Exception("There is no song file in the plugins/ZMusicBox/songs directory"); // FIXME
 			}
 			$this->song = $song;
@@ -280,7 +289,8 @@ class ZMusicBox extends PluginBase implements Listener{
 			$this->taskHandler->cancel();
 		}
 		$this->MusicPlayer = new MusicPlayer($this);
-		$this->taskHandler = $this->getServer()->getScheduler()->scheduleRepeatingTask($this->MusicPlayer, 2990 / $this->song->speed);
+		$this->taskHandler = $this->getServer()->getScheduler()->scheduleRepeatingTask($this->MusicPlayer, 2000 / $this->song->speed);
+		$this->getLogger()->debug("speed: {$this->song->speed}");
 	}
 }
 class MusicPlayer extends PluginTask{
